@@ -92,6 +92,8 @@ body.inmenu #hud,body.inmenu button.act{visibility:hidden}
 .card button.mode .me{font-size:30px;line-height:1}
 .card button.mode small{display:block;font-weight:600;font-size:12px;opacity:.9;margin-top:2px}
 .card input[type=text]{width:100%;box-sizing:border-box;padding:12px;font-size:17px;border-radius:12px;border:2px solid var(--muted);background:transparent;color:var(--text);margin:4px 0 8px;font-family:inherit;-webkit-user-select:text;user-select:text}
+.card .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.card .grid button{margin-top:0;font-size:14px;padding:10px 6px;line-height:1.2}
 .card .row{display:flex;gap:8px;margin-top:10px}
 .card .row button{flex:1;margin-top:0;padding:10px 6px;font-size:14px}
 .card button.alt{background:transparent;color:var(--text);border:2px solid var(--muted)}
@@ -693,7 +695,180 @@ function buildPlayerBoy(){
   addShadow(g, 0.8);
   return { g, legL: legs[0], legR: legs[1], armL, armR };
 }
-function buildPlayer(kind){ return kind === "boy" ? buildPlayerBoy() : buildPlayerGirl(); }
+function buildPlayerRosie(){
+  const g = new THREE.Group();
+  const skin = lam(0xb9794f), blk = lam(0x16161a), hair = lam(0xe6d09c), hairL = lam(0xf5ead0), white = lam(0xf4f4f0), pearl = lam(0xfaf6ee, { emissive: 0x444444 });
+  const gold = lam(0xffd35a, { emissive: 0x6a4a00 }), tan = lam(0xc9955a), pink = lam(0xf2b8d8, { emissive: 0x553344 }), lav = lam(0xd8c8f0);
+  // black top and shorts
+  g.add(mesh(gBox(0.9,1.0,0.55), blk, 0, 1.5, 0));
+  g.add(mesh(gBox(0.94,0.36,0.58), blk, 0, 0.98, 0));
+  // head and face
+  g.add(mesh(gBox(0.62,0.62,0.6), skin, 0, 2.3, 0));
+  g.add(mesh(gBox(0.14,0.16,0.05), bas(0x111111), -0.15, 2.3, 0.31));
+  g.add(mesh(gBox(0.14,0.16,0.05), bas(0x111111), 0.15, 2.3, 0.31));
+  g.add(mesh(gBox(0.1,0.1,0.05), bas(0x4a2a1a), 0, 2.1, 0.31));
+  // long wavy platinum blonde hair
+  g.add(mesh(gBox(0.8,1.9,0.3), hair, 0, 1.6, -0.34));
+  [-1, 1].forEach(sd => {
+    g.add(mesh(gBox(0.16,1.5,0.5), hair, sd*0.44, 1.85, -0.02));
+    const w1 = mesh(gBox(0.14,0.5,0.4), hairL, sd*0.5, 1.15, 0.0); w1.rotation.z = sd*0.25; g.add(w1);
+    const w2 = mesh(gBox(0.12,0.4,0.3), hairL, sd*0.38, 2.15, 0.28); w2.rotation.z = -sd*0.2; g.add(w2);
+  });
+  g.add(mesh(gBox(0.7,0.2,0.1), hair, 0.05, 2.55, 0.33));
+  g.add(mesh(gBox(0.5,0.8,0.1), hairL, -0.08, 1.3, -0.5));
+  // black cat-ear hood with a pink bow
+  g.add(mesh(gBox(0.9,0.95,0.5), blk, 0, 2.45, -0.4));
+  g.add(mesh(gBox(0.84,0.3,0.84), blk, 0, 2.74, 0));
+  [-1, 1].forEach(sd => {
+    g.add(mesh(new THREE.ConeGeometry(0.22,0.5,4), blk, sd*0.3, 3.1, 0));
+    g.add(mesh(new THREE.ConeGeometry(0.12,0.3,4), lav, sd*0.3, 3.05, 0.06));
+  });
+  const bl = mesh(gBox(0.2,0.16,0.08), pink, -0.16, 3.0, 0.3); bl.rotation.z = 0.5; g.add(bl);
+  const br = mesh(gBox(0.2,0.16,0.08), pink, 0.16, 3.0, 0.3); br.rotation.z = -0.5; g.add(br);
+  g.add(mesh(new THREE.SphereGeometry(0.08,8,6), pink, 0, 3.0, 0.3));
+  // pearl and gold necklaces
+  const n1 = mesh(new THREE.TorusGeometry(0.3,0.04,6,14), pearl, 0, 2.02, 0); n1.rotation.x = Math.PI/2; g.add(n1);
+  const n2 = mesh(new THREE.TorusGeometry(0.34,0.015,6,14), gold, 0, 1.96, 0); n2.rotation.x = Math.PI/2; g.add(n2);
+  g.add(mesh(gBox(0.03,0.6,0.03), gold, 0, 1.68, 0.3));
+  // arms with black cuffs
+  const mkArm = x => {
+    const a = pivot(x, 1.95, 0);
+    a.add(mesh(gBox(0.26,0.9,0.26), skin, 0, -0.4, 0));
+    a.add(mesh(gBox(0.31,0.3,0.31), blk, 0, -0.76, 0));
+    g.add(a); return a;
+  };
+  const armL = mkArm(-0.6), armR = mkArm(0.6);
+  // legs, white socks, teddy bear slippers
+  const legs = legPair(g, 1.0, 0.24, skin, 0.34, 1.0);
+  legs.forEach(l => {
+    l.add(mesh(gBox(0.4,0.5,0.4), white, 0, -0.68, 0));
+    l.add(mesh(gBox(0.5,0.28,0.62), tan, 0, -0.88, 0.06));
+    [-0.16, 0.16].forEach(x => l.add(mesh(gBox(0.12,0.14,0.1), tan, x, -0.68, 0.34)));
+    l.add(mesh(gBox(0.08,0.08,0.05), bas(0x111111), -0.1, -0.78, 0.38));
+    l.add(mesh(gBox(0.08,0.08,0.05), bas(0x111111), 0.1, -0.78, 0.38));
+  });
+  const bat = mesh(new THREE.CylinderGeometry(0.1,0.2,1.7,8), lam(0xd6a14a), 0, -1.1, 0.1); bat.rotation.x = Math.PI/2.6;
+  armR.add(bat);
+  addShadow(g, 0.8);
+  return { g, legL: legs[0], legR: legs[1], armL, armR };
+}
+function buildPlayerEmma(){
+  const g = new THREE.Group();
+  const skin = lam(0xe3b58f), hair = lam(0x5a4332), hairL = lam(0x735745), denim = lam(0x8aa4cf), denimL = lam(0xa6bbdf);
+  const gray = lam(0xb4b8c0), grayD = lam(0x969ba4), white = lam(0xfafafa, { emissive: 0x555555 }), goldM = lam(0xe8cf7a, { emissive: 0x4a3a00 });
+  // chest, strapless denim top with ruffle
+  g.add(mesh(gBox(0.9,1.0,0.55), skin, 0, 1.5, 0));
+  g.add(mesh(gBox(0.94,0.8,0.58), denim, 0, 1.38, 0));
+  g.add(mesh(gBox(0.98,0.16,0.62), denimL, 0, 1.84, 0));
+  g.add(mesh(gBox(0.2,0.3,0.1), denimL, 0, 1.55, 0.31));
+  // head, face, lips
+  g.add(mesh(gBox(0.62,0.62,0.6), skin, 0, 2.3, 0));
+  g.add(mesh(gBox(0.1,0.12,0.05), bas(0x2a1a14), -0.16, 2.3, 0.31));
+  g.add(mesh(gBox(0.1,0.12,0.05), bas(0x2a1a14), 0.16, 2.3, 0.31));
+  g.add(mesh(gBox(0.16,0.05,0.05), bas(0xd98a98), 0, 2.1, 0.31));
+  // thin round gold glasses
+  [-0.16, 0.16].forEach(x => g.add(mesh(new THREE.TorusGeometry(0.15,0.013,6,16), goldM, x, 2.3, 0.33)));
+  g.add(mesh(gBox(0.08,0.02,0.02), goldM, 0, 2.32, 0.33));
+  // long wavy dark brown hair
+  g.add(mesh(gBox(0.74,0.28,0.74), hair, 0, 2.66, 0));
+  g.add(mesh(gBox(0.84,2.0,0.3), hair, 0, 1.6, -0.34));
+  [-1, 1].forEach(sd => {
+    g.add(mesh(gBox(0.17,1.75,0.52), hair, sd*0.45, 1.72, -0.02));
+    const w = mesh(gBox(0.14,0.6,0.4), hairL, sd*0.52, 1.0, 0.04); w.rotation.z = sd*0.22; g.add(w);
+    const f = mesh(gBox(0.22,0.5,0.1), hair, sd*0.3, 2.42, 0.33); f.rotation.z = -sd*0.3; g.add(f);
+  });
+  g.add(mesh(gBox(0.3,0.16,0.1), hairL, 0, 2.58, 0.33));
+  // big white ribbon bow on top with a long tail
+  const bl = mesh(gBox(0.5,0.18,0.05), white, -0.3, 3.02, 0.05); bl.rotation.z = 0.45; g.add(bl);
+  const br = mesh(gBox(0.5,0.18,0.05), white, 0.3, 3.02, 0.05); br.rotation.z = -0.45; g.add(br);
+  g.add(mesh(new THREE.SphereGeometry(0.1,8,6), white, 0, 2.98, 0.05));
+  const tail = mesh(gBox(0.1,1.1,0.03), white, 0.5, 2.15, 0.0); tail.rotation.z = 0.12; g.add(tail);
+  // sparkles
+  [[-0.55,2.9,0.2],[0.6,2.6,0.25],[-0.6,2.1,0.3],[0.45,3.3,0.1],[-0.3,3.3,0.2]].forEach(q => g.add(mesh(new THREE.OctahedronGeometry(0.09,0), bas(0xffffff), q[0], q[1], q[2])));
+  // arms with fluffy white arm warmers
+  const mkArm = x => {
+    const a = pivot(x, 1.95, 0);
+    a.add(mesh(gBox(0.26,0.9,0.26), skin, 0, -0.4, 0));
+    a.add(mesh(gBox(0.36,0.62,0.36), white, 0, -0.38, 0));
+    g.add(a); return a;
+  };
+  const armL = mkArm(-0.6), armR = mkArm(0.6);
+  // baggy light gray cargo pants with pockets and a drawstring
+  g.add(mesh(gBox(1.0,0.22,0.64), gray, 0, 1.0, 0));
+  g.add(mesh(gBox(0.06,0.4,0.04), white, 0.1, 0.8, 0.34));
+  const legs = legPair(g, 0.95, 0.26, gray, 0.5, 0.95);
+  legs.forEach((l, i) => {
+    l.add(mesh(gBox(0.12,0.34,0.36), grayD, i ? 0.26 : -0.26, -0.35, 0));
+    l.add(mesh(gBox(0.5,0.14,0.62), white, 0, -0.9, 0.06));
+  });
+  const bat = mesh(new THREE.CylinderGeometry(0.1,0.2,1.7,8), lam(0xd6a14a), 0, -1.1, 0.1); bat.rotation.x = Math.PI/2.6;
+  armR.add(bat);
+  addShadow(g, 0.8);
+  return { g, legL: legs[0], legR: legs[1], armL, armR };
+}
+let stripeMat = null;
+function stripedMat(){
+  if (stripeMat) return stripeMat;
+  const c = document.createElement("canvas"); c.width = 32; c.height = 32; const x = c.getContext("2d");
+  x.fillStyle = "#fdf3f6"; x.fillRect(0,0,32,32); x.fillStyle = "#f2b3c6"; x.fillRect(0,4,32,5); x.fillRect(0,20,32,5);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 2);
+  stripeMat = new THREE.MeshLambertMaterial({ map: t }); return stripeMat;
+}
+function buildPlayerBridgie(){
+  const g = new THREE.Group();
+  const skin = lam(0xf0cdb0), hair = lam(0x7a6860), hairL = lam(0x948379), blk = lam(0x1a1a1e), pink = lam(0xf4b8cc, { emissive: 0x553344 });
+  const pinkL = lam(0xf9dbe6), white = lam(0xfdf6f8, { emissive: 0x444444 }), shoe = lam(0xf6dce6), stripes = stripedMat();
+  // striped pink and white top with bows
+  g.add(mesh(gBox(0.9,1.0,0.55), skin, 0, 1.5, 0));
+  g.add(mesh(gBox(0.92,0.82,0.57), stripes, 0, 1.4, 0));
+  g.add(mesh(gBox(0.12,0.1,0.05), pink, -0.1, 1.72, 0.3)); g.add(mesh(gBox(0.12,0.1,0.05), pink, 0.1, 1.72, 0.3)); g.add(mesh(gBox(0.07,0.07,0.06), pink, 0, 1.72, 0.3));
+  // head and face
+  g.add(mesh(gBox(0.62,0.62,0.6), skin, 0, 2.3, 0));
+  g.add(mesh(gBox(0.1,0.13,0.05), bas(0x3a2a26), -0.15, 2.3, 0.31));
+  g.add(mesh(gBox(0.1,0.13,0.05), bas(0x3a2a26), 0.15, 2.3, 0.31));
+  g.add(mesh(gBox(0.1,0.04,0.05), bas(0xe49aa8), 0, 2.12, 0.31));
+  // long straight gray-brown hair with soft bangs
+  g.add(mesh(gBox(0.74,0.28,0.74), hair, 0, 2.66, 0));
+  g.add(mesh(gBox(0.8,2.1,0.3), hair, 0, 1.55, -0.34));
+  [-1, 1].forEach(sd => {
+    g.add(mesh(gBox(0.14,1.9,0.5), hair, sd*0.43, 1.65, -0.02));
+    const f = mesh(gBox(0.2,0.4,0.1), hair, sd*0.28, 2.42, 0.33); f.rotation.z = -sd*0.25; g.add(f);
+  });
+  g.add(mesh(gBox(0.4,0.2,0.1), hairL, 0, 2.55, 0.33));
+  // black cat-ear headband with pink bow, bunny clip and pink clip
+  g.add(mesh(gBox(0.78,0.08,0.7), blk, 0, 2.84, 0));
+  [-1, 1].forEach(sd => {
+    g.add(mesh(new THREE.ConeGeometry(0.2,0.45,4), blk, sd*0.33, 3.08, 0));
+    g.add(mesh(new THREE.ConeGeometry(0.11,0.28,4), pinkL, sd*0.33, 3.03, 0.06));
+  });
+  const bl = mesh(gBox(0.18,0.14,0.06), pink, 0.28, 3.1, 0.14); bl.rotation.z = 0.5; g.add(bl);
+  const br = mesh(gBox(0.18,0.14,0.06), pink, 0.46, 3.1, 0.14); br.rotation.z = -0.5; g.add(br);
+  g.add(mesh(new THREE.SphereGeometry(0.06,8,6), pink, 0.37, 3.1, 0.14));
+  g.add(mesh(gBox(0.14,0.16,0.04), white, 0.3, 2.52, 0.34));
+  g.add(mesh(gBox(0.04,0.1,0.04), white, 0.27, 2.66, 0.34)); g.add(mesh(gBox(0.04,0.1,0.04), white, 0.33, 2.66, 0.34));
+  const clip = mesh(gBox(0.22,0.05,0.04), pink, 0.22, 2.4, 0.35); clip.rotation.z = -0.4; g.add(clip);
+  // pearl choker
+  const ch = mesh(new THREE.TorusGeometry(0.26,0.035,6,14), white, 0, 2.02, 0); ch.rotation.x = Math.PI/2; g.add(ch);
+  // arms
+  const mkArm = x => { const a = pivot(x, 1.95, 0); a.add(mesh(gBox(0.26,0.9,0.26), skin, 0, -0.4, 0)); g.add(a); return a; };
+  const armL = mkArm(-0.6), armR = mkArm(0.6);
+  // pale pink ruffle shorts
+  g.add(mesh(gBox(0.98,0.3,0.62), pinkL, 0, 0.98, 0));
+  g.add(mesh(gBox(1.04,0.12,0.68), white, 0, 0.84, 0));
+  // striped thigh-high socks with bows and pink platform shoes
+  const legs = legPair(g, 1.0, 0.24, skin, 0.34, 1.0);
+  legs.forEach(l => {
+    l.add(mesh(gBox(0.4,0.72,0.4), stripes, 0, -0.6, 0));
+    l.add(mesh(gBox(0.44,0.1,0.44), white, 0, -0.22, 0));
+    l.add(mesh(gBox(0.14,0.1,0.05), pink, 0, -0.3, 0.22));
+    l.add(mesh(gBox(0.52,0.2,0.66), shoe, 0, -0.92, 0.05));
+  });
+  const bat = mesh(new THREE.CylinderGeometry(0.1,0.2,1.7,8), lam(0xd6a14a), 0, -1.1, 0.1); bat.rotation.x = Math.PI/2.6;
+  armR.add(bat);
+  addShadow(g, 0.8);
+  return { g, legL: legs[0], legR: legs[1], armL, armR };
+}
+function buildPlayer(kind){ return kind === "boy" ? buildPlayerBoy() : (kind === "rosie" ? buildPlayerRosie() : (kind === "emma" ? buildPlayerEmma() : (kind === "bridgie" ? buildPlayerBridgie() : buildPlayerGirl()))); }
 function buildMonkey(fur){
   const g = new THREE.Group(), f = lam(fur), fc = lam(0xe8c39e);
   g.add(mesh(gBox(0.7,0.8,0.5), f, 0, 0.9, 0));
@@ -1939,7 +2114,7 @@ const settings = { sound: true, quality: 1, sens: 1, outfit: "girl", nick: "", r
 try { const st = JSON.parse(lsGet("cq-settings") || "null"); if (st) Object.assign(settings, st); } catch (e) {}
 settings.quality = clamp(settings.quality | 0, 0, 2);
 settings.sens = clamp(+settings.sens || 1, 0.5, 2);
-settings.outfit = settings.outfit === "boy" ? "boy" : "girl";
+settings.outfit = ["boy", "rosie", "emma", "bridgie"].indexOf(settings.outfit) >= 0 ? settings.outfit : "girl";
 settings.nick = String(settings.nick || "").slice(0, 12); settings.room = String(settings.room || "").slice(0, 12);
 function saveSettings(){ lsSet("cq-settings", JSON.stringify(settings)); }
 function applyQuality(){
@@ -1993,21 +2168,20 @@ function applySave(sv){
 function show(html){ card.innerHTML = html; overlay.classList.remove("hide"); overlay.classList.toggle("peek", !!S.preview); }
 function on(id, fn){ const el = $(id); if (el) el.addEventListener("click", fn); }
 function setOutfit(kind){
-  settings.outfit = kind === "boy" ? "boy" : "girl"; saveSettings();
+  settings.outfit = ["boy", "rosie", "emma", "bridgie"].indexOf(kind) >= 0 ? kind : "girl"; saveSettings();
   const old = pl.g, np = buildPlayer(settings.outfit);
   np.g.position.copy(old.position); np.g.rotation.y = old.rotation.y; np.g.visible = true;
   scene.remove(old); scene.add(np.g); pl = np;
   applyWorn();
 }
+const OUTFITS = [["girl", "👧", "Chloe"], ["boy", "🧑", "Gio"], ["rosie", "🐱", "Rosie"], ["emma", "🎭", "theatergirl (Emma’s)"], ["bridgie", "🐴", "horse girl (bridgie boo)"]];
 function showOutfit(back){
   S.preview = true;
   const sel = settings.outfit;
-  show("<h1>Choose your character</h1><p class='muted'>Pick your character. You can change it any time.</p>" +
-    "<button id='o1' class='" + (sel === "girl" ? "" : "alt") + "'>👧 Chloe</button>" +
-    "<button id='o2' class='" + (sel === "boy" ? "" : "alt") + "'>🧑 Gio</button>" +
-    "<button id='od' class='alt'>Done</button>");
-  on("o1", () => { setOutfit("girl"); showOutfit(back); });
-  on("o2", () => { setOutfit("boy"); showOutfit(back); });
+  show("<h1>Choose your character</h1><p class='muted'>You can change it any time.</p><div class='grid'>" +
+    OUTFITS.map((o, i) => "<button id='o" + i + "' class='" + (sel === o[0] ? "" : "alt") + "'>" + o[1] + " " + o[2] + "</button>").join("") +
+    "</div><button id='od' class='alt'>Done</button>");
+  OUTFITS.forEach((o, i) => on("o" + i, () => { setOutfit(o[0]); showOutfit(back); }));
   on("od", () => { S.preview = false; back(); });
 }
 const PRIVACY_URL = "privacy.html"; // TODO: replace with your hosted privacy policy address
@@ -2188,6 +2362,7 @@ function startEscape(sv){
 const remotes = new Map(), pops = [], names = new Map();
 let room = null, roomKind = "", userCap = null, netPeers = [], netAcc = 0, emoteIdx = 0;
 const EMOTES = ["👋","😂","🔥","❄️","🐒"];
+function outfitKind(o){ return ["coco", "boy", "rosie", "emma", "bridgie"].indexOf(o) >= 0 ? o : "girl"; }
 function hueColor(str){ let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return new THREE.Color("hsl(" + h + ",80%,60%)"); }
 function makeLabel(text){
   const c = document.createElement("canvas"); c.width = 256; c.height = 64; const x = c.getContext("2d");
@@ -2209,7 +2384,7 @@ function popEmoji(g, emoji, h){
   pops.push({ sp, g, t: 0 });
 }
 function makeRemote(p){
-  const o = p.presence.o, kind = o === "coco" ? "coco" : (o === "boy" ? "boy" : "girl");
+  const kind = outfitKind(p.presence.o);
   const m = kind === "coco" ? buildMonkey(0x8a5a2a) : buildPlayer(kind);
   const col = hueColor(p.peer);
   const ring = mesh(new THREE.RingGeometry(0.9,1.15,20), bas(col.getHex(), { transparent: true, opacity: 0.85, side: THREE.DoubleSide }), 0, 0.08, 0);
@@ -2258,7 +2433,7 @@ function netTick(dt){
   netAcc += dt; if (netAcc >= 0.1){ netAcc = 0; sendPresence(); }
   netPeers.forEach((p, idx) => {
     let r = remotes.get(p.peer); if (!r) return;
-    const pr = p.presence, o = pr.o, want = o === "coco" ? "coco" : (o === "boy" ? "boy" : "girl");
+    const pr = p.presence, want = outfitKind(pr.o);
     if (r.kind !== want){ dropRemote(p.peer); r = makeRemote(p); }
     r.g.visible = pr.g === S.game && S.mode !== "menu";
     r.tx = +pr.x || 0; r.tz = +pr.z || 0; r.th = +pr.h || 0; r.jy = +pr.j || 0;
