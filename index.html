@@ -91,6 +91,7 @@ body.inmenu #hud,body.inmenu button.act{visibility:hidden}
 .card button.mode{display:flex;align-items:center;gap:12px;text-align:left;font-size:17px;padding:12px 14px;margin-top:8px;color:#fff}
 .card button.mode .me{font-size:30px;line-height:1}
 .card button.mode small{display:block;font-weight:600;font-size:12px;opacity:.9;margin-top:2px}
+.card input[type=text]{width:100%;box-sizing:border-box;padding:12px;font-size:17px;border-radius:12px;border:2px solid var(--muted);background:transparent;color:var(--text);margin:4px 0 8px;font-family:inherit;-webkit-user-select:text;user-select:text}
 .card .row{display:flex;gap:8px;margin-top:10px}
 .card .row button{flex:1;margin-top:0;padding:10px 6px;font-size:14px}
 .card button.alt{background:transparent;color:var(--text);border:2px solid var(--muted)}
@@ -1934,11 +1935,12 @@ let zCap = 18, pCap = 160, fpsT = 0, fpsN = 0, lowCount = 0, autoT = 0;
 function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
 function lsDel(k){ try { localStorage.removeItem(k); } catch (e) {} }
-const settings = { sound: true, quality: 1, sens: 1, outfit: "girl" };
+const settings = { sound: true, quality: 1, sens: 1, outfit: "girl", nick: "", room: "" };
 try { const st = JSON.parse(lsGet("cq-settings") || "null"); if (st) Object.assign(settings, st); } catch (e) {}
 settings.quality = clamp(settings.quality | 0, 0, 2);
 settings.sens = clamp(+settings.sens || 1, 0.5, 2);
 settings.outfit = settings.outfit === "boy" ? "boy" : "girl";
+settings.nick = String(settings.nick || "").slice(0, 12); settings.room = String(settings.room || "").slice(0, 12);
 function saveSettings(){ lsSet("cq-settings", JSON.stringify(settings)); }
 function applyQuality(){
   const q = QUAL[settings.quality];
@@ -2023,9 +2025,10 @@ function showMenu(){
     modeBtn("m1", "#d9541e", "🧟", "Zombie Island Quest", sq ? "Continue · " + CH[Math.min(sq.stage, CH.length - 1)].t : "Fight through 8 chapters to save Coco") +
     modeBtn("m2", "#2f8f4a", "🐒", "Play as Coco: Escape", se ? "Continue your escape" : "Break out of the cage and run for the zoo") +
     modeBtn("m3", "#2f78c4", "❄️", "Cold Forest", sc ? "Continue · " + sc.got.filter(Boolean).length + "/9 clothes found" : "Find warm clothes for you and Coco") +
+    modeBtn("m5", "#7a4ad0", "👥", "Play with friends", roomKind === "mqtt" ? "Connected · room " + settings.room : (roomKind === "claude" ? "Connected through Claude" : "See friends as characters with a room code")) +
     "<div class='row'><button id='fit' class='alt'>👕 Characters</button><button id='set' class='alt'>⚙️ Settings</button><button id='pv' class='alt'>🔒 Privacy</button></div>" +
     "<p class='muted' style='text-align:center;margin:14px 0 0'>A game by <b>morecheezmo</b><br>© 2026 morecheezmo</p>");
-  on("m1", showQuestMenu); on("m2", showEscapeMenu); on("m3", showColdMenu);
+  on("m1", showQuestMenu); on("m2", showEscapeMenu); on("m3", showColdMenu); on("m5", () => showFriends(showMenu));
   on("fit", () => showOutfit(showMenu)); on("set", () => showSettings(showMenu)); on("pv", () => showPrivacy(showMenu));
 }
 function showQuestMenu(){
@@ -2183,7 +2186,7 @@ function startEscape(sv){
 }
 /* ================= Together: friends in the same world ================= */
 const remotes = new Map(), pops = [], names = new Map();
-let room = null, userCap = null, netPeers = [], netAcc = 0, emoteIdx = 0;
+let room = null, roomKind = "", userCap = null, netPeers = [], netAcc = 0, emoteIdx = 0;
 const EMOTES = ["👋","😂","🔥","❄️","🐒"];
 function hueColor(str){ let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return new THREE.Color("hsl(" + h + ",80%,60%)"); }
 function makeLabel(text){
@@ -2235,8 +2238,8 @@ function sendPresence(){
   if (!room) return;
   const live = S.mode === "play" || S.mode === "pause" || S.mode === "dead";
   const patch = live
-    ? { g: S.game, x: +P.x.toFixed(1), z: +P.z.toFixed(1), j: +(P.jy || 0).toFixed(2), h: +P.heading.toFixed(2), o: S.game === "escape" ? "coco" : settings.outfit }
-    : { g: "menu" };
+    ? { g: S.game, x: +P.x.toFixed(1), z: +P.z.toFixed(1), j: +(P.jy || 0).toFixed(2), h: +P.heading.toFixed(2), o: S.game === "escape" ? "coco" : settings.outfit, n: settings.nick || "" }
+    : { g: "menu", n: settings.nick || "" };
   room.presence(patch).catch(() => {});
 }
 function sendEmote(){
@@ -2268,24 +2271,134 @@ function netTick(dt){
     const sw = moved > 0.02 ? Math.sin(r.step) * 0.8 : 0;
     r.m.legL.rotation.x = sw; r.m.legR.rotation.x = -sw; r.m.armL.rotation.x = -sw * 0.8;
     r.g.position.set(r.x, groundY(r.x, r.z) + r.jy, r.z);
-    setLabel(r, names.get(p.by) || ("Friend " + (idx + 1)));
+    setLabel(r, names.get(p.by) || (typeof pr.n === "string" && pr.n ? pr.n.slice(0, 12) : "Friend " + (idx + 1)));
   });
+}
+function attachRoom(rm, kind){
+  leaveRoom();
+  room = rm; roomKind = kind;
+  room.onPeers(onPeersChange);
+  room.on("emote", m => {
+    if (m.isMe) return;
+    const r = remotes.get(m.peer);
+    if (r && m.data && EMOTES.indexOf(m.data.k) >= 0) popEmoji(r.g, m.data.k, r.kind === "coco" ? 3.4 : 4.4);
+  });
+  sendPresence();
+}
+function leaveRoom(){
+  if (room && room.leave){ try { room.leave(); } catch (e) {} }
+  room = null; roomKind = ""; netPeers = [];
+  Array.from(remotes.keys()).forEach(dropRemote);
+  $("fr").textContent = ""; $("bEmote").style.display = "none";
 }
 async function initNet(){
   try {
     if (!window.claude || !window.claude.use) return;
     const rm = await window.claude.use("room"); if (!rm) return;
     try { userCap = await window.claude.use("user"); } catch (e) { userCap = null; }
-    room = rm;
-    room.onPeers(onPeersChange);
-    room.on("emote", m => {
-      if (m.isMe) return;
-      const r = remotes.get(m.peer);
-      if (r && m.data && EMOTES.indexOf(m.data.k) >= 0) popEmoji(r.g, m.data.k, r.kind === "coco" ? 3.4 : 4.4);
-    });
-    $("bEmote").addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); sendEmote(); });
-    sendPresence();
-  } catch (e) { room = null; }
+    attachRoom(rm, "claude");
+  } catch (e) { room = null; roomKind = ""; }
+}
+$("bEmote").addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); sendEmote(); });
+
+/* ---- friends through a free public message server (MQTT over WebSocket) ---- */
+const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"];
+const MQTT_URLS = ["https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js", "https://unpkg.com/mqtt@5/dist/mqtt.min.js"];
+function loadMqtt(){
+  if (window.mqtt) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let i = 0;
+    const next = () => {
+      if (i >= MQTT_URLS.length) return reject(new Error("load"));
+      const sc = document.createElement("script"); sc.src = MQTT_URLS[i++];
+      sc.onload = () => (window.mqtt ? resolve() : next()); sc.onerror = next; document.head.appendChild(sc);
+    };
+    next();
+  });
+}
+function connectBroker(url, id, code){
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const client = window.mqtt.connect(url, { clientId: "cq_" + id, clean: true, reconnectPeriod: 0, connectTimeout: 6000,
+      will: { topic: "morecheezmo/cq1/" + code + "/p/" + id, payload: "", qos: 0, retain: false } });
+    const fail = () => { if (done) return; done = true; clearTimeout(t); try { client.end(true); } catch (e) {} reject(new Error("connect")); };
+    const t = setTimeout(fail, 7000);
+    client.on("connect", () => { if (done) return; done = true; clearTimeout(t); try { client.options.reconnectPeriod = 2000; } catch (e) {} resolve(client); });
+    client.on("error", fail);
+  });
+}
+function makeMqttRoom(client, code, id){
+  const base = "morecheezmo/cq1/" + code, myTopic = base + "/p/" + id;
+  const state = {}, peersMap = new Map(), peerHandlers = [], topicHandlers = {};
+  let dirty = true, lastPub = 0;
+  const list = () => Array.from(peersMap.entries()).map(en => ({ peer: en[0], by: null, isMe: false, kind: "viewer", guest: false, presence: en[1].presence }));
+  const changed = () => { const l = list(); peerHandlers.forEach(h => h({ peers: l })); };
+  client.subscribe([base + "/p/+", base + "/e"]);
+  client.on("message", (topic, payload) => {
+    const txt = String(payload);
+    if (topic.indexOf(base + "/p/") === 0){
+      const pid = topic.slice(base.length + 3);
+      if (pid === id) return;
+      if (!txt){ if (peersMap.delete(pid)) changed(); return; }
+      let pr; try { pr = JSON.parse(txt); } catch (e) { return; }
+      if (!pr || typeof pr !== "object") return;
+      peersMap.set(pid, { presence: pr, seen: Date.now() }); changed();
+    } else if (topic === base + "/e"){
+      let m; try { m = JSON.parse(txt); } catch (e) { return; }
+      if (!m || m.id === id || typeof m.t !== "string") return;
+      (topicHandlers[m.t] || []).forEach(h => h({ isMe: false, peer: m.id, data: m.d }));
+    }
+  });
+  const pubTimer = setInterval(() => {
+    const now = Date.now();
+    if (dirty || now - lastPub > 1500){ dirty = false; lastPub = now; try { client.publish(myTopic, JSON.stringify(state), { qos: 0 }); } catch (e) {} }
+  }, 120);
+  const expTimer = setInterval(() => {
+    const now = Date.now(); let any = false;
+    peersMap.forEach((v, k) => { if (now - v.seen > 5000){ peersMap.delete(k); any = true; } });
+    if (any) changed();
+  }, 1000);
+  return {
+    onPeers(h){ peerHandlers.push(h); h({ peers: list() }); return () => { const i = peerHandlers.indexOf(h); if (i >= 0) peerHandlers.splice(i, 1); }; },
+    on(t, h){ (topicHandlers[t] = topicHandlers[t] || []).push(h); return () => {}; },
+    presence(patch){ Object.keys(patch).forEach(k => { if (state[k] !== patch[k]){ state[k] = patch[k]; dirty = true; } }); return Promise.resolve(); },
+    emit(t, d){ try { client.publish(base + "/e", JSON.stringify({ t, id, d }), { qos: 0 }); } catch (e) {} return Promise.resolve(); },
+    leave(){ clearInterval(pubTimer); clearInterval(expTimer); try { client.publish(myTopic, "", { qos: 0 }); client.end(); } catch (e) {} }
+  };
+}
+async function joinFriends(codeRaw, nickRaw){
+  const code = String(codeRaw || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
+  if (code.length < 3) throw new Error("code");
+  settings.room = code; settings.nick = String(nickRaw || "").trim().slice(0, 12); saveSettings();
+  await loadMqtt();
+  const id = Math.random().toString(36).slice(2, 10);
+  let client = null;
+  for (const url of BROKERS){ try { client = await connectBroker(url, id, code); break; } catch (e) {} }
+  if (!client) throw new Error("connect");
+  attachRoom(makeMqttRoom(client, code, id), "mqtt");
+}
+function showFriends(back){
+  const on1 = roomKind === "mqtt";
+  if (roomKind === "claude"){
+    show("<h1>👥 Play with friends</h1><p>You are connected through Claude. Everyone who opens the shared Claude link is in the same room automatically.</p><p class='muted'>To play from a public website link instead, open the game from that link.</p><button id='fb'>Back</button>");
+    on("fb", back); return;
+  }
+  show("<h1>👥 Play with friends</h1><p>Everyone types the <b>same room code</b>, then picks the same game mode. You will see each other as characters.</p>" +
+    "<p class='muted' style='margin-bottom:0'>Your name</p><input id='nick' type='text' maxlength='12' value='" + settings.nick.replace(/[^\w \-]/g, "") + "' placeholder='Your name'>" +
+    "<p class='muted' style='margin-bottom:0'>Room code (letters and numbers)</p><input id='rcode' type='text' maxlength='12' value='" + settings.room + "' placeholder='for example: zoo4821' autocapitalize='none'>" +
+    (on1 ? "<p><b>Connected to room " + settings.room + ".</b> Send this code to friends.</p>" : "") +
+    "<button id='fj'>" + (on1 ? "Reconnect" : "Join room") + "</button>" + (on1 ? "<button id='fl' class='alt'>Leave room</button>" : "") +
+    "<p id='fs' class='muted'></p><button id='fb' class='alt'>Back</button>");
+  on("fb", back);
+  on("fl", () => { leaveRoom(); showFriends(back); });
+  on("fj", async () => {
+    const st = $("fs"), btn = $("fj"); btn.disabled = true; st.textContent = "Connecting…";
+    try { await joinFriends($("rcode").value, $("nick").value); showFriends(back); }
+    catch (e) {
+      st.textContent = e.message === "code" ? "Use a room code with at least 3 letters or numbers." : "Could not connect. Check your internet and try again in a minute.";
+      btn.disabled = false;
+    }
+  });
 }
 
 function startGame(sv){
